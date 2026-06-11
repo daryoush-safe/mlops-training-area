@@ -1,0 +1,77 @@
+stages:
+  ingest:
+    cmd: python -m sqlgen.data.ingest
+    deps:
+      - spider_data.zip
+      - src/sqlgen/data/ingest.py
+    params:
+      - paths
+    outs:
+      - data/raw/spider
+
+  extract_schema:
+    cmd: python -m sqlgen.data.extract_schema
+    deps:
+      - data/raw/spider/tables.json
+      - src/sqlgen/data/extract_schema.py
+      - src/sqlgen/data/schema.py
+    params:
+      - paths
+    outs:
+      - data/interim/schemas.json
+
+  extract_pairs:
+    cmd: python -m sqlgen.data.extract_pairs
+    deps:
+      - data/raw/spider
+      - src/sqlgen/data/extract_pairs.py
+    params:
+      - paths
+      - splits
+    outs:
+      - data/interim/pairs
+
+  build_labels:
+    cmd: python -m sqlgen.data.build_labels
+    deps:
+      - data/interim/schemas.json
+      - data/interim/pairs
+      - src/sqlgen/data/build_labels.py
+      - src/sqlgen/data/prune.py
+      - src/sqlgen/data/schema.py
+    params:
+      - paths
+      - splits
+      - prune
+    outs:
+      - data/interim/labeled
+      - reports/prune_report.json:
+          cache: false
+
+  validate:
+    cmd: python -m sqlgen.data.validate
+    deps:
+      - data/interim/labeled
+      - reports/prune_report.json
+      - src/sqlgen/data/validate.py
+    params:
+      - paths
+      - validation
+    metrics:
+      - reports/validation.json:
+          cache: false
+
+  build_dataset:
+    cmd: python -m sqlgen.features.build_dataset
+    deps:
+      - data/interim/labeled
+      - data/interim/schemas.json
+      - reports/validation.json
+      - src/sqlgen/features/build_dataset.py
+      - src/sqlgen/data/schema.py
+    params:
+      - paths
+      - splits
+      - serialization
+    outs:
+      - data/processed/schema_pruner

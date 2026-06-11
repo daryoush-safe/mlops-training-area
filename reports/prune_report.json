@@ -1,0 +1,20 @@
+{
+  "train": {
+    "total": 8651,
+    "labeled": 8651,
+    "parser": 8650,
+    "fallback": 1,
+    "extraction_failed": 0,
+    "unknown_db": 0,
+    "failures": []
+  },
+  "val": {
+    "total": 1034,
+    "labeled": 1034,
+    "parser": 1034,
+    "fallback": 0,
+    "extraction_failed": 0,
+    "unknown_db": 0,
+    "failures": []
+  }
+}

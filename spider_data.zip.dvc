@@ -1,0 +1,5 @@
+outs:
+- md5: b039fdb9e1e3adc386a91c5b2211667e
+  size: 205800266
+  hash: md5
+  path: spider_data.zip

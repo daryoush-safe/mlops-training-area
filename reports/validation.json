@@ -1,0 +1,18 @@
+{
+  "splits": {
+    "train": {
+      "examples": 8651,
+      "extraction_failure_rate": 0.0,
+      "fallback_rate": 0.0001,
+      "invalid_examples": 0
+    },
+    "val": {
+      "examples": 1034,
+      "extraction_failure_rate": 0.0,
+      "fallback_rate": 0.0,
+      "invalid_examples": 0
+    }
+  },
+  "violations": [],
+  "passed": true
+}

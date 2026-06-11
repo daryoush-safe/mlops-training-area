@@ -1,0 +1,18 @@
+# environments & secrets
+.venv/
+.docker-venv/
+.env
+
+# data layer is DVC-managed
+/data/
+/spider_data.zip
+
+# reports: metrics files are git-tracked (cache: false), keep dir clean otherwise
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# scratch
+/tmp/
+__MACOSX/

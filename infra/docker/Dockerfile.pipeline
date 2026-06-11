@@ -1,0 +1,25 @@
+FROM python:3.12-slim
+
+COPY --from=ghcr.io/astral-sh/uv:0.7 /uv /usr/local/bin/uv
+
+ENV UV_LINK_MODE=copy \
+    UV_PROJECT_ENVIRONMENT=/app/.docker-venv \
+    PATH="/app/.docker-venv/bin:$PATH"
+
+WORKDIR /app
+
+# Install dependencies first for layer caching; source arrives via bind mount
+# in compose (or the COPY below for standalone use).
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-install-project --no-dev
+
+COPY src ./src
+COPY flows ./flows
+COPY dvc.yaml params.yaml README.md ./
+RUN uv sync --frozen --no-dev
+
+COPY infra/docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["python", "flows/offline_data.py"]

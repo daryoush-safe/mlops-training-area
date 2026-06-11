@@ -1,0 +1,220 @@
+schema: '2.0'
+stages:
+  ingest:
+    cmd: python -m sqlgen.data.ingest
+    deps:
+    - path: spider_data.zip
+      hash: md5
+      md5: b039fdb9e1e3adc386a91c5b2211667e
+      size: 205800266
+    - path: src/sqlgen/data/ingest.py
+      hash: md5
+      md5: 0634d2d8750314cf91c7e1ff7da6932d
+      size: 1507
+    params:
+      params.yaml:
+        paths:
+          raw_zip: spider_data.zip
+          raw_dir: data/raw/spider
+          interim_dir: data/interim
+          processed_dir: data/processed/schema_pruner
+          reports_dir: reports
+    outs:
+    - path: data/raw/spider
+      hash: md5
+      md5: feacb99cf992e41038b736432b0a682c.dir
+      size: 37883988
+      nfiles: 4
+  extract_schema:
+    cmd: python -m sqlgen.data.extract_schema
+    deps:
+    - path: data/raw/spider/tables.json
+      hash: md5
+      md5: a0fd4de9c7703334f0bd3fcd84463f5e
+      size: 810971
+    - path: src/sqlgen/data/extract_schema.py
+      hash: md5
+      md5: 3d4c86fa78a69ac76e2501032871e21b
+      size: 1296
+    - path: src/sqlgen/data/schema.py
+      hash: md5
+      md5: 5ca2c348e38999e317ab3c16eaf32be9
+      size: 6142
+    params:
+      params.yaml:
+        paths:
+          raw_zip: spider_data.zip
+          raw_dir: data/raw/spider
+          interim_dir: data/interim
+          processed_dir: data/processed/schema_pruner
+          reports_dir: reports
+    outs:
+    - path: data/interim/schemas.json
+      hash: md5
+      md5: c87126d5be840a71c419804682dd6833
+      size: 761284
+  extract_pairs:
+    cmd: python -m sqlgen.data.extract_pairs
+    deps:
+    - path: data/raw/spider
+      hash: md5
+      md5: feacb99cf992e41038b736432b0a682c.dir
+      size: 37883988
+      nfiles: 4
+    - path: src/sqlgen/data/extract_pairs.py
+      hash: md5
+      md5: b0b568acd7b58d5f513893bbb2690f6d
+      size: 1986
+    params:
+      params.yaml:
+        paths:
+          raw_zip: spider_data.zip
+          raw_dir: data/raw/spider
+          interim_dir: data/interim
+          processed_dir: data/processed/schema_pruner
+          reports_dir: reports
+        splits:
+          train:
+          - train_spider.json
+          - train_others.json
+          val:
+          - dev.json
+    outs:
+    - path: data/interim/pairs
+      hash: md5
+      md5: 4848138de6d63e82a4fde13c6930b717.dir
+      size: 2895837
+      nfiles: 2
+  build_labels:
+    cmd: python -m sqlgen.data.build_labels
+    deps:
+    - path: data/interim/pairs
+      hash: md5
+      md5: 4848138de6d63e82a4fde13c6930b717.dir
+      size: 2895837
+      nfiles: 2
+    - path: data/interim/schemas.json
+      hash: md5
+      md5: c87126d5be840a71c419804682dd6833
+      size: 761284
+    - path: src/sqlgen/data/build_labels.py
+      hash: md5
+      md5: 075ecc7ded8f996683892fac6dd74071
+      size: 3599
+    - path: src/sqlgen/data/prune.py
+      hash: md5
+      md5: 57566f44134cc154f8153b84150fb46d
+      size: 5426
+    - path: src/sqlgen/data/schema.py
+      hash: md5
+      md5: 5ca2c348e38999e317ab3c16eaf32be9
+      size: 6142
+    params:
+      params.yaml:
+        paths:
+          raw_zip: spider_data.zip
+          raw_dir: data/raw/spider
+          interim_dir: data/interim
+          processed_dir: data/processed/schema_pruner
+          reports_dir: reports
+        prune:
+          dialect: sqlite
+          include_primary_keys: true
+          include_foreign_keys: true
+          enable_fallback: true
+        splits:
+          train:
+          - train_spider.json
+          - train_others.json
+          val:
+          - dev.json
+    outs:
+    - path: data/interim/labeled
+      hash: md5
+      md5: 14d0b052d33f93af4ffd3a03e930758f.dir
+      size: 8805770
+      nfiles: 2
+    - path: reports/prune_report.json
+      hash: md5
+      md5: fe0277401be32ac9c2eb92429fbe9a8f
+      size: 330
+  validate:
+    cmd: python -m sqlgen.data.validate
+    deps:
+    - path: data/interim/labeled
+      hash: md5
+      md5: 14d0b052d33f93af4ffd3a03e930758f.dir
+      size: 8805770
+      nfiles: 2
+    - path: reports/prune_report.json
+      hash: md5
+      md5: fe0277401be32ac9c2eb92429fbe9a8f
+      size: 330
+    - path: src/sqlgen/data/validate.py
+      hash: md5
+      md5: a9e3b93b0e0e6b280438ad1274575f6d
+      size: 3944
+    params:
+      params.yaml:
+        paths:
+          raw_zip: spider_data.zip
+          raw_dir: data/raw/spider
+          interim_dir: data/interim
+          processed_dir: data/processed/schema_pruner
+          reports_dir: reports
+        validation:
+          max_parse_failure_rate: 0.02
+          max_fallback_rate: 0.05
+          min_examples_per_split: 100
+    outs:
+    - path: reports/validation.json
+      hash: md5
+      md5: b3c47b479006361211deca15431748b2
+      size: 339
+  build_dataset:
+    cmd: python -m sqlgen.features.build_dataset
+    deps:
+    - path: data/interim/labeled
+      hash: md5
+      md5: 14d0b052d33f93af4ffd3a03e930758f.dir
+      size: 8805770
+      nfiles: 2
+    - path: data/interim/schemas.json
+      hash: md5
+      md5: c87126d5be840a71c419804682dd6833
+      size: 761284
+    - path: reports/validation.json
+      hash: md5
+      md5: b3c47b479006361211deca15431748b2
+      size: 339
+    - path: src/sqlgen/data/schema.py
+      hash: md5
+      md5: 5ca2c348e38999e317ab3c16eaf32be9
+      size: 6142
+    - path: src/sqlgen/features/build_dataset.py
+      hash: md5
+      md5: ca8fab100dc98fa0385cec7407381146
+      size: 2664
+    params:
+      params.yaml:
+        paths:
+          raw_zip: spider_data.zip
+          raw_dir: data/raw/spider
+          interim_dir: data/interim
+          processed_dir: data/processed/schema_pruner
+          reports_dir: reports
+        serialization:
+          style: verbose
+          include_types: true
+        splits:
+          train:
+          - train_spider.json
+          - train_others.json
+          val:
+          - dev.json
+    outs:
+    - path: data/processed/schema_pruner
+      hash: md5
+      md5: af1f6d78cac6e3160e0b53fcf1d4bf68.dir
+      size: 50457910
+      nfiles: 2

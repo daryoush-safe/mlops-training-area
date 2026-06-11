@@ -1,0 +1,28 @@
+paths:
+  raw_zip: spider_data.zip
+  raw_dir: data/raw/spider
+  interim_dir: data/interim
+  processed_dir: data/processed/schema_pruner
+  reports_dir: reports
+
+splits:
+  train:
+    - train_spider.json
+    - train_others.json
+  val:
+    - dev.json
+
+prune:
+  dialect: sqlite
+  include_primary_keys: true
+  include_foreign_keys: true
+  enable_fallback: true
+
+serialization:
+  style: verbose # verbose | compact
+  include_types: true
+
+validation:
+  max_parse_failure_rate: 0.02
+  max_fallback_rate: 0.05
+  min_examples_per_split: 100
