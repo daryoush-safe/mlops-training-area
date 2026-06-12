@@ -3,8 +3,9 @@
 .docker-venv/
 .env
 
-# data layer is DVC-managed
+# data & model layers are DVC-managed
 /data/
+/models/
 /spider_data.zip
 
 # reports: metrics files are git-tracked (cache: false), keep dir clean otherwise

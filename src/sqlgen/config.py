@@ -38,12 +38,63 @@ class ValidationConfig(BaseModel):
     min_examples_per_split: int = 100
 
 
+class ModelConfig(BaseModel):
+    base: str = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
+    revision: str = "main"  # pin a HF commit hash for full reproducibility
+
+
+class LoraParams(BaseModel):
+    r: int = 16
+    alpha: int = 32
+    dropout: float = 0.05
+    target_modules: list[str] = [
+        "q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj",
+    ]
+
+
+class TrainConfig(BaseModel):
+    seed: int = 42
+    epochs: int = 2
+    learning_rate: float = 2e-4
+    batch_size: int = 4
+    grad_accum: int = 4
+    max_seq_len: int = 2048
+    warmup_ratio: float = 0.03
+    bf16: bool = True
+    logging_steps: int = 20
+    limit: int | None = None  # cap examples per split for smoke runs
+    output_dir: Path = Path("models/schema_pruner")
+    lora: LoraParams = Field(default_factory=LoraParams)
+
+
+class MlflowConfig(BaseModel):
+    experiment: str = "schema-pruner"
+    registered_model: str = "schema-pruner-qwen2.5-coder-1.5b"
+
+
+class EvalGatesConfig(BaseModel):
+    min_table_recall: float = 0.95
+    min_column_recall: float = 0.90
+    max_unparseable_rate: float = 0.01
+
+
+class EvalConfig(BaseModel):
+    max_new_tokens: int = 256
+    num_samples: int | None = None  # None = full val split
+    batch_size: int = 8
+    gates: EvalGatesConfig = Field(default_factory=EvalGatesConfig)
+
+
 class Params(BaseModel):
     paths: PathsConfig = Field(default_factory=PathsConfig)
     splits: SplitsConfig = Field(default_factory=SplitsConfig)
     prune: PruneConfig = Field(default_factory=PruneConfig)
     serialization: SerializationConfig = Field(default_factory=SerializationConfig)
     validation: ValidationConfig = Field(default_factory=ValidationConfig)
+    model: ModelConfig = Field(default_factory=ModelConfig)
+    train: TrainConfig = Field(default_factory=TrainConfig)
+    mlflow: MlflowConfig = Field(default_factory=MlflowConfig)
+    eval: EvalConfig = Field(default_factory=EvalConfig)
 
 
 def load_params(path: str | Path = "params.yaml") -> Params:

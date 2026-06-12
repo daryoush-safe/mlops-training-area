@@ -18,6 +18,13 @@ dev = [
     "ruff>=0.8",
 ]
 
+# heavy training stack, opt-in: uv sync --extra train
+[project.optional-dependencies]
+train = [
+  "torch>=2.4", "transformers>=4.46", "peft>=0.13", "trl>=0.20",
+  "datasets>=3.0", "accelerate>=1.0", "mlflow>=2.18",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
