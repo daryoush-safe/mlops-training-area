@@ -48,7 +48,13 @@ class LoraParams(BaseModel):
     alpha: int = 32
     dropout: float = 0.05
     target_modules: list[str] = [
-        "q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj",
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj",
     ]
 
 

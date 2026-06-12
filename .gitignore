@@ -17,3 +17,5 @@ __pycache__/
 # scratch
 /tmp/
 __MACOSX/
+
+.vscode/
