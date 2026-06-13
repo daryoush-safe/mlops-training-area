@@ -41,8 +41,13 @@ def main() -> None:
         mlflow.log_metrics(
             {"train_examples_dropped": train_dropped, "val_examples_dropped": val_dropped}
         )
-        log.info("train=%d val=%d (dropped %d/%d)", len(train_ds), len(val_ds),
-                 train_dropped, val_dropped)
+        log.info(
+            "train=%d val=%d (dropped %d/%d)",
+            len(train_ds),
+            len(val_ds),
+            train_dropped,
+            val_dropped,
+        )
 
         model = load_base_model(params.model, bf16=cfg.bf16)
 
@@ -77,7 +82,6 @@ def main() -> None:
 
         trainer.save_model(str(cfg.output_dir))  # adapter + peft config
         tokenizer.save_pretrained(str(cfg.output_dir))
-        # The adapter is a few MB (base weights are referenced, not copied);
         # register_pruner points at this artifact path.
         mlflow.log_artifacts(str(cfg.output_dir), artifact_path="model")
 
@@ -91,8 +95,12 @@ def main() -> None:
             "train_examples_dropped": train_dropped,
         }
         write_json(params.paths.reports_dir / "train_report.json", report)
-        log.info("run %s done: train_loss=%.4f eval_loss=%s",
-                 run.info.run_id, result.training_loss, eval_metrics.get("eval_loss"))
+        log.info(
+            "run %s done: train_loss=%.4f eval_loss=%s",
+            run.info.run_id,
+            result.training_loss,
+            eval_metrics.get("eval_loss"),
+        )
 
 
 if __name__ == "__main__":

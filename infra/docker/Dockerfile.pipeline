@@ -8,8 +8,6 @@ ENV UV_LINK_MODE=copy \
 
 WORKDIR /app
 
-# Install dependencies first for layer caching; source arrives via bind mount
-# in compose (or the COPY below for standalone use).
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-install-project --no-dev
 

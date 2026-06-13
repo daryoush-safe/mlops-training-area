@@ -5,6 +5,7 @@ import json
 import logging
 
 import mlflow
+import mlflow.artifacts
 import torch
 from peft import PeftModel
 
@@ -38,7 +39,7 @@ def generate_batch(model, tokenizer, rows: list[dict], max_new_tokens: int) -> l
             do_sample=False,
             pad_token_id=tokenizer.pad_token_id,
         )
-    completions = out[:, inputs["input_ids"].shape[1]:]
+    completions = out[:, inputs["input_ids"].shape[1] :]
     return tokenizer.batch_decode(completions, skip_special_tokens=True)
 
 
@@ -52,10 +53,13 @@ def main() -> None:
     cfg = params.eval
     train_report = read_json(params.paths.reports_dir / "train_report.json")
 
+    tracking.setup_mlflow(params.mlflow.experiment)
+    adapter_path = mlflow.artifacts.download_artifacts(train_report["model_uri"])
+
     tokenizer = load_tokenizer(params.model)
     tokenizer.padding_side = "left"  # decoder-only batched generation
     model = load_base_model(params.model)
-    model = PeftModel.from_pretrained(model, str(params.train.output_dir))
+    model = PeftModel.from_pretrained(model, adapter_path)
     model.eval()
 
     rows = load_rows(params.paths.processed_dir / "val.jsonl", cfg.num_samples)
@@ -91,7 +95,6 @@ def main() -> None:
     metrics = aggregate(scores, n_unparseable)
     log.info("metrics: %s", {k: round(v, 4) for k, v in metrics.items()})
 
-    tracking.setup_mlflow(params.mlflow.experiment)
     with mlflow.start_run(run_id=train_report["run_id"]):
         mlflow.log_metrics(metrics)
         mlflow.log_text(
