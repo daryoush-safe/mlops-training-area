@@ -29,7 +29,9 @@ validation:
 
 model:
   base: Qwen/Qwen2.5-Coder-1.5B-Instruct
-  revision: main # pin a HF commit hash for full reproducibility
+  revision: main
+  mirror_bucket: models
+  mirror_prefix: base
 
 train:
   seed: 42

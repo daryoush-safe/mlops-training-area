@@ -51,12 +51,16 @@ make infra-up       # MinIO (:9000/:9001) + MLflow (:5000) + Prefect server (:42
 make pipeline       # run the data flow dockerized (or: make pipeline-local)
 make dvc-push       # push data/cache to MinIO (the flow already does this)
 
-make training       # train → evaluate → register dockerized (needs NVIDIA Container Toolkit)
-
-# or on the host:
 make setup-train    # + torch/transformers/peft/trl/mlflow (uv sync --extra train)
-make training-local # train → evaluate → register on the host (GPU recommended)
+make mirror-base    # one-time: mirror the base model from HuggingFace into MinIO
+
+make training       # train → evaluate → register dockerized (needs NVIDIA Container Toolkit)
+make training-local # or on the host (GPU recommended)
 ```
+
+`mirror-base` seeds `s3://models/base/<model>/<revision>` from HuggingFace once;
+training and evaluation then load the base model from MinIO, so jobs don't depend
+on huggingface.co at runtime. Re-run it only when you change `model.base`/`revision`.
 
 For a quick end-to-end smoke test of the training plumbing, set
 `train.limit: 64` and `eval.num_samples: 32` in `params.yaml` first.

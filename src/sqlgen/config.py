@@ -40,7 +40,18 @@ class ValidationConfig(BaseModel):
 
 class ModelConfig(BaseModel):
     base: str = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
-    revision: str = "main"  # pin a HF commit hash for full reproducibility
+    revision: str = "main"
+    mirror_bucket: str = "models"
+    mirror_prefix: str = "base"
+
+    @property
+    def mirror_key(self) -> str:
+        """Object key prefix for this (base, revision) inside the bucket."""
+        return f"{self.mirror_prefix}/{self.base}/{self.revision}"
+
+    @property
+    def mirror_uri(self) -> str:
+        return f"s3://{self.mirror_bucket}/{self.mirror_key}"
 
 
 class LoraParams(BaseModel):

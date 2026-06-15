@@ -1,4 +1,4 @@
-.PHONY: setup setup-train infra-up infra-down pipeline pipeline-local training training-local test lint dvc-push dvc-pull
+.PHONY: setup setup-train infra-up infra-down mirror-base pipeline pipeline-local training training-local test lint dvc-push dvc-pull
 
 COMPOSE = docker compose --env-file .env -f infra/docker-compose.yml
 
@@ -13,6 +13,12 @@ infra-up: ## start MinIO + MLflow + Prefect server
 
 infra-down:
 	$(COMPOSE) down
+
+# Seed the base model into MinIO from HuggingFace (needs setup-train + infra-up).
+# Run once per base/revision; training then pulls the model from MinIO, not HF.
+mirror-base:
+	set -a; [ -f .env ] && . ./.env; set +a; \
+	AWS_S3_ENDPOINT_URL=http://localhost:9000 uv run python -m sqlgen.training.mirror
 
 pipeline: ## run the offline data pipeline in docker (builds image)
 	$(COMPOSE) up --build pipeline
