@@ -1,0 +1,9 @@
+{
+  "run_id": "836198b5a2fa491da4bbaa459ff6d323",
+  "model_uri": "runs:/836198b5a2fa491da4bbaa459ff6d323/model",
+  "train_loss": 0.13584954870000565,
+  "eval_loss": 1.2434327602386475,
+  "train_runtime_s": 31548.9,
+  "train_examples": 8651,
+  "train_examples_dropped": 0
+}

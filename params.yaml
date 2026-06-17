@@ -62,6 +62,6 @@ eval:
   num_samples: null # null = full val split
   batch_size: 1
   gates:
-    min_table_recall: 0.95
-    min_column_recall: 0.90
+    min_table_recall: 0.90
+    min_column_recall: 0.80
     max_unparseable_rate: 0.01

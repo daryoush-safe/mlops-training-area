@@ -5,6 +5,7 @@ import logging
 import time
 
 import mlflow
+from mlflow.models import Model
 from transformers import set_seed
 from trl import SFTConfig, SFTTrainer
 
@@ -84,6 +85,13 @@ def main() -> None:
 
         trainer.save_model(str(cfg.output_dir))  # adapter + peft config
         tokenizer.save_pretrained(str(cfg.output_dir))
+        # MLflow 3 register_model only accepts a runs:/ URI when the artifact dir
+        # contains an MLmodel file (otherwise it looks for a LoggedModel and fails).
+        # The adapter is consumed via download_artifacts + PeftModel, so a
+        # flavor-less metadata file is enough to make registration work.
+        Model(run_id=run.info.run_id, artifact_path="model").save(
+            str(cfg.output_dir / "MLmodel")
+        )
         # register_pruner points at this artifact path.
         mlflow.log_artifacts(str(cfg.output_dir), artifact_path="model")
 
