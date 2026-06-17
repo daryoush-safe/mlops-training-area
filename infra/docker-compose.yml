@@ -43,7 +43,8 @@ services:
       /bin/sh -c "pip install --quiet boto3 &&
       mlflow server --host 0.0.0.0 --port 5000
       --backend-store-uri sqlite:////mlflow/mlflow.db
-      --artifacts-destination s3://mlflow"
+      --artifacts-destination s3://mlflow
+      --allowed-hosts 'mlflow:5000,localhost:5000,127.0.0.1:5000'"
     ports:
       - "5000:5000"
     environment:
@@ -112,6 +113,7 @@ services:
       AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
       AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
       DVC_REMOTE_ENDPOINT: http://minio:9000
+      PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
     volumes:
       # Mount the repo so the adapter/reports land on the host workspace.
       - ..:/app

@@ -61,6 +61,8 @@ def main() -> None:
             warmup_ratio=cfg.warmup_ratio,
             bf16=cfg.bf16,
             max_length=cfg.max_seq_len,
+            gradient_checkpointing=cfg.gradient_checkpointing,
+            gradient_checkpointing_kwargs={"use_reentrant": False},
             logging_steps=cfg.logging_steps,
             eval_strategy="epoch",
             save_strategy="no",  # only the final adapter is kept (saved below)

@@ -43,6 +43,7 @@ class ModelConfig(BaseModel):
     revision: str = "main"
     mirror_bucket: str = "models"
     mirror_prefix: str = "base"
+    load_in_4bit: bool = True
 
     @property
     def mirror_key(self) -> str:
@@ -78,6 +79,7 @@ class TrainConfig(BaseModel):
     max_seq_len: int = 2048
     warmup_ratio: float = 0.03
     bf16: bool = True
+    gradient_checkpointing: bool = True  # trade ~25% speed for much lower activation memory
     logging_steps: int = 20
     limit: int | None = None  # cap examples per split for smoke runs
     output_dir: Path = Path("models/schema_pruner")

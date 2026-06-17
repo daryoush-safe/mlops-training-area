@@ -9,8 +9,8 @@ stages:
       size: 205800266
     - path: src/sqlgen/data/ingest.py
       hash: md5
-      md5: 0634d2d8750314cf91c7e1ff7da6932d
-      size: 1507
+      md5: 338932eda0b52811662f246b07ba311d
+      size: 1357
     params:
       params.yaml:
         paths:
@@ -34,12 +34,12 @@ stages:
       size: 810971
     - path: src/sqlgen/data/extract_schema.py
       hash: md5
-      md5: 3d4c86fa78a69ac76e2501032871e21b
-      size: 1296
+      md5: 01378eb3812c18dfeb71deea6d523eef
+      size: 1038
     - path: src/sqlgen/data/schema.py
       hash: md5
-      md5: 5ca2c348e38999e317ab3c16eaf32be9
-      size: 6142
+      md5: 15869462b2ca05a6fc8585f4dad715f8
+      size: 5212
     params:
       params.yaml:
         paths:
@@ -63,8 +63,8 @@ stages:
       nfiles: 4
     - path: src/sqlgen/data/extract_pairs.py
       hash: md5
-      md5: b0b568acd7b58d5f513893bbb2690f6d
-      size: 1986
+      md5: 8f5e3802a6de0358bf51ec2b1edef825
+      size: 1747
     params:
       params.yaml:
         paths:
@@ -99,16 +99,16 @@ stages:
       size: 761284
     - path: src/sqlgen/data/build_labels.py
       hash: md5
-      md5: 075ecc7ded8f996683892fac6dd74071
-      size: 3599
+      md5: b30d76059c8318d98ad921a2f36a17eb
+      size: 3208
     - path: src/sqlgen/data/prune.py
       hash: md5
-      md5: 57566f44134cc154f8153b84150fb46d
-      size: 5426
+      md5: ac569763e6be7b8b5d4bcb84a3b734c8
+      size: 4104
     - path: src/sqlgen/data/schema.py
       hash: md5
-      md5: 5ca2c348e38999e317ab3c16eaf32be9
-      size: 6142
+      md5: 15869462b2ca05a6fc8585f4dad715f8
+      size: 5212
     params:
       params.yaml:
         paths:
@@ -152,8 +152,8 @@ stages:
       size: 330
     - path: src/sqlgen/data/validate.py
       hash: md5
-      md5: a9e3b93b0e0e6b280438ad1274575f6d
-      size: 3944
+      md5: 56b16580d8c46332e795852904349772
+      size: 3489
     params:
       params.yaml:
         paths:
@@ -189,12 +189,12 @@ stages:
       size: 339
     - path: src/sqlgen/data/schema.py
       hash: md5
-      md5: 5ca2c348e38999e317ab3c16eaf32be9
-      size: 6142
+      md5: 15869462b2ca05a6fc8585f4dad715f8
+      size: 5212
     - path: src/sqlgen/features/build_dataset.py
       hash: md5
-      md5: ca8fab100dc98fa0385cec7407381146
-      size: 2664
+      md5: 1bffd1ea1dc6906003d0b1684af5872c
+      size: 2133
     params:
       params.yaml:
         paths:

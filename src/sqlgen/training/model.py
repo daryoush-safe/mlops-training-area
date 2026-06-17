@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import torch
 from peft import LoraConfig
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 from sqlgen import storage
 from sqlgen.config import LoraParams, ModelConfig
@@ -18,10 +18,20 @@ def load_tokenizer(cfg: ModelConfig):
 
 def load_base_model(cfg: ModelConfig, *, bf16: bool = True):
     path = storage.ensure_base_model(cfg)
+    dtype = torch.bfloat16 if bf16 else torch.float32
+    quant_config = None
+    if cfg.load_in_4bit:
+        quant_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_use_double_quant=True,
+            bnb_4bit_compute_dtype=dtype,
+        )
     return AutoModelForCausalLM.from_pretrained(
         path,
-        torch_dtype=torch.bfloat16 if bf16 else torch.float32,
+        torch_dtype=dtype,
         device_map="auto",
+        quantization_config=quant_config,
     )
 
 

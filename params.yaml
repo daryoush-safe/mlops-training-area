@@ -32,16 +32,18 @@ model:
   revision: main
   mirror_bucket: models
   mirror_prefix: base
+  load_in_4bit: true
 
 train:
   seed: 42
   epochs: 2
   learning_rate: 2.0e-4
-  batch_size: 4
-  grad_accum: 4
-  max_seq_len: 2048
+  batch_size: 1
+  grad_accum: 16
+  max_seq_len: 1024
   warmup_ratio: 0.03
   bf16: true
+  gradient_checkpointing: true
   logging_steps: 20
   limit: null # set to e.g. 64 for a smoke run
   output_dir: models/schema_pruner
@@ -58,7 +60,7 @@ mlflow:
 eval:
   max_new_tokens: 256
   num_samples: null # null = full val split
-  batch_size: 8
+  batch_size: 1
   gates:
     min_table_recall: 0.95
     min_column_recall: 0.90
