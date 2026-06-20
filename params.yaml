@@ -26,3 +26,42 @@ validation:
   max_parse_failure_rate: 0.02
   max_fallback_rate: 0.05
   min_examples_per_split: 100
+
+model:
+  base: Qwen/Qwen2.5-Coder-1.5B-Instruct
+  revision: main
+  mirror_bucket: models
+  mirror_prefix: base
+  load_in_4bit: true
+
+train:
+  seed: 42
+  epochs: 2
+  learning_rate: 2.0e-4
+  batch_size: 1
+  grad_accum: 16
+  max_seq_len: 1024
+  warmup_ratio: 0.03
+  bf16: true
+  gradient_checkpointing: true
+  logging_steps: 20
+  limit: null # set to e.g. 64 for a smoke run
+  output_dir: models/schema_pruner
+  lora:
+    r: 16
+    alpha: 32
+    dropout: 0.05
+    target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+
+mlflow:
+  experiment: schema-pruner
+  registered_model: schema-pruner-qwen2.5-coder-1.5b
+
+eval:
+  max_new_tokens: 256
+  num_samples: null # null = full val split
+  batch_size: 1
+  gates:
+    min_table_recall: 0.90
+    min_column_recall: 0.80
+    max_unparseable_rate: 0.01

@@ -75,3 +75,55 @@ stages:
       - serialization
     outs:
       - data/processed/schema_pruner
+
+  train:
+    cmd: python -m sqlgen.training.train
+    deps:
+      - data/processed/schema_pruner
+      - src/sqlgen/prompts/pruner.py
+      - src/sqlgen/storage.py
+      - src/sqlgen/tracking.py
+      - src/sqlgen/training/dataset.py
+      - src/sqlgen/training/model.py
+      - src/sqlgen/training/train.py
+    params:
+      - model
+      - train
+      - mlflow
+    outs:
+      - models/schema_pruner
+      - reports/train_report.json:
+          cache: false
+
+  evaluate:
+    cmd: python -m sqlgen.training.evaluate
+    deps:
+      - data/processed/schema_pruner
+      - models/schema_pruner
+      - reports/train_report.json
+      - src/sqlgen/evaluation/pruner.py
+      - src/sqlgen/prompts/pruner.py
+      - src/sqlgen/storage.py
+      - src/sqlgen/training/evaluate.py
+      - src/sqlgen/training/model.py
+    params:
+      - model
+      - eval
+      - mlflow
+    metrics:
+      - reports/eval_schema_pruner.json:
+          cache: false
+
+  register:
+    cmd: python -m sqlgen.registry.register_pruner
+    deps:
+      - reports/eval_schema_pruner.json
+      - reports/train_report.json
+      - src/sqlgen/registry/promotion.py
+      - src/sqlgen/registry/register_pruner.py
+    params:
+      - eval
+      - mlflow
+    outs:
+      - reports/registration.json:
+          cache: false

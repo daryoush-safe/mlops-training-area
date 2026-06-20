@@ -1,0 +1,18 @@
+{
+  "model_name": "schema-pruner-qwen2.5-coder-1.5b",
+  "version": "1",
+  "alias": "candidate",
+  "run_id": "836198b5a2fa491da4bbaa459ff6d323",
+  "model_uri": "runs:/836198b5a2fa491da4bbaa459ff6d323/model",
+  "metrics": {
+    "table_precision": 0.9239200515796261,
+    "table_recall": 0.9390715667311412,
+    "table_f1": 0.920447637468914,
+    "column_precision": 0.8727732964435092,
+    "column_recall": 0.8545055013420075,
+    "column_f1": 0.8521959422388318,
+    "exact_match": 0.5957446808510638,
+    "unparseable_rate": 0.0,
+    "n_examples": 1034.0
+  }
+}

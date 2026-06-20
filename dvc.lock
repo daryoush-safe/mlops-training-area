@@ -9,8 +9,8 @@ stages:
       size: 205800266
     - path: src/sqlgen/data/ingest.py
       hash: md5
-      md5: 0634d2d8750314cf91c7e1ff7da6932d
-      size: 1507
+      md5: 338932eda0b52811662f246b07ba311d
+      size: 1357
     params:
       params.yaml:
         paths:
@@ -34,12 +34,12 @@ stages:
       size: 810971
     - path: src/sqlgen/data/extract_schema.py
       hash: md5
-      md5: 3d4c86fa78a69ac76e2501032871e21b
-      size: 1296
+      md5: 01378eb3812c18dfeb71deea6d523eef
+      size: 1038
     - path: src/sqlgen/data/schema.py
       hash: md5
-      md5: 5ca2c348e38999e317ab3c16eaf32be9
-      size: 6142
+      md5: 15869462b2ca05a6fc8585f4dad715f8
+      size: 5212
     params:
       params.yaml:
         paths:
@@ -63,8 +63,8 @@ stages:
       nfiles: 4
     - path: src/sqlgen/data/extract_pairs.py
       hash: md5
-      md5: b0b568acd7b58d5f513893bbb2690f6d
-      size: 1986
+      md5: 8f5e3802a6de0358bf51ec2b1edef825
+      size: 1747
     params:
       params.yaml:
         paths:
@@ -99,16 +99,16 @@ stages:
       size: 761284
     - path: src/sqlgen/data/build_labels.py
       hash: md5
-      md5: 075ecc7ded8f996683892fac6dd74071
-      size: 3599
+      md5: b30d76059c8318d98ad921a2f36a17eb
+      size: 3208
     - path: src/sqlgen/data/prune.py
       hash: md5
-      md5: 57566f44134cc154f8153b84150fb46d
-      size: 5426
+      md5: ac569763e6be7b8b5d4bcb84a3b734c8
+      size: 4104
     - path: src/sqlgen/data/schema.py
       hash: md5
-      md5: 5ca2c348e38999e317ab3c16eaf32be9
-      size: 6142
+      md5: 15869462b2ca05a6fc8585f4dad715f8
+      size: 5212
     params:
       params.yaml:
         paths:
@@ -152,8 +152,8 @@ stages:
       size: 330
     - path: src/sqlgen/data/validate.py
       hash: md5
-      md5: a9e3b93b0e0e6b280438ad1274575f6d
-      size: 3944
+      md5: 56b16580d8c46332e795852904349772
+      size: 3489
     params:
       params.yaml:
         paths:
@@ -189,12 +189,12 @@ stages:
       size: 339
     - path: src/sqlgen/data/schema.py
       hash: md5
-      md5: 5ca2c348e38999e317ab3c16eaf32be9
-      size: 6142
+      md5: 15869462b2ca05a6fc8585f4dad715f8
+      size: 5212
     - path: src/sqlgen/features/build_dataset.py
       hash: md5
-      md5: ca8fab100dc98fa0385cec7407381146
-      size: 2664
+      md5: 1bffd1ea1dc6906003d0b1684af5872c
+      size: 2133
     params:
       params.yaml:
         paths:
@@ -218,3 +218,179 @@ stages:
       md5: af1f6d78cac6e3160e0b53fcf1d4bf68.dir
       size: 50457910
       nfiles: 2
+  train:
+    cmd: python -m sqlgen.training.train
+    deps:
+    - path: data/processed/schema_pruner
+      hash: md5
+      md5: af1f6d78cac6e3160e0b53fcf1d4bf68.dir
+      size: 50457910
+      nfiles: 2
+    - path: src/sqlgen/prompts/pruner.py
+      hash: md5
+      md5: d73f5a6e66a72f06126f504e70d413ca
+      size: 2562
+    - path: src/sqlgen/storage.py
+      hash: md5
+      md5: c65708bce07332a2ade6f5c910d6e8ce
+      size: 2365
+    - path: src/sqlgen/tracking.py
+      hash: md5
+      md5: 9a9a3a75bde9bff23605586ce1865d57
+      size: 2370
+    - path: src/sqlgen/training/dataset.py
+      hash: md5
+      md5: 81eedd83424bfef6393921a4f6bdb556
+      size: 1266
+    - path: src/sqlgen/training/model.py
+      hash: md5
+      md5: c222110f7fb2040c00e496e73457d086
+      size: 1319
+    - path: src/sqlgen/training/train.py
+      hash: md5
+      md5: 9f5d1bb4c1b7e1c8e254d191033dbd9b
+      size: 4439
+    params:
+      params.yaml:
+        mlflow:
+          experiment: schema-pruner
+          registered_model: schema-pruner-qwen2.5-coder-1.5b
+        model:
+          base: Qwen/Qwen2.5-Coder-1.5B-Instruct
+          revision: main
+          mirror_bucket: models
+          mirror_prefix: base
+          load_in_4bit: true
+        train:
+          seed: 42
+          epochs: 2
+          learning_rate: 0.0002
+          batch_size: 1
+          grad_accum: 16
+          max_seq_len: 1024
+          warmup_ratio: 0.03
+          bf16: true
+          gradient_checkpointing: true
+          logging_steps: 20
+          limit:
+          output_dir: models/schema_pruner
+          lora:
+            r: 16
+            alpha: 32
+            dropout: 0.05
+            target_modules:
+            - q_proj
+            - k_proj
+            - v_proj
+            - o_proj
+            - gate_proj
+            - up_proj
+            - down_proj
+    outs:
+    - path: models/schema_pruner
+      hash: md5
+      md5: d751713988987e9331980363e24189ce.dir
+      size: 0
+      nfiles: 0
+    - path: reports/train_report.json
+      hash: md5
+      md5: 17260dcb3ff316eb844ee0e3db177507
+      size: 273
+  evaluate:
+    cmd: python -m sqlgen.training.evaluate
+    deps:
+    - path: data/processed/schema_pruner
+      hash: md5
+      md5: af1f6d78cac6e3160e0b53fcf1d4bf68.dir
+      size: 50457910
+      nfiles: 2
+    - path: models/schema_pruner
+      hash: md5
+      md5: d751713988987e9331980363e24189ce.dir
+      size: 0
+      nfiles: 0
+    - path: reports/train_report.json
+      hash: md5
+      md5: 17260dcb3ff316eb844ee0e3db177507
+      size: 273
+    - path: src/sqlgen/evaluation/pruner.py
+      hash: md5
+      md5: 9b6148273e63ac6a0c6e3b5d9ef73ae0
+      size: 2313
+    - path: src/sqlgen/prompts/pruner.py
+      hash: md5
+      md5: d73f5a6e66a72f06126f504e70d413ca
+      size: 2562
+    - path: src/sqlgen/storage.py
+      hash: md5
+      md5: c65708bce07332a2ade6f5c910d6e8ce
+      size: 2365
+    - path: src/sqlgen/training/evaluate.py
+      hash: md5
+      md5: 820986fb67f047d4848f5d5d7cc637e6
+      size: 3923
+    - path: src/sqlgen/training/model.py
+      hash: md5
+      md5: c222110f7fb2040c00e496e73457d086
+      size: 1319
+    params:
+      params.yaml:
+        eval:
+          max_new_tokens: 256
+          num_samples:
+          batch_size: 1
+          gates:
+            min_table_recall: 0.9
+            min_column_recall: 0.8
+            max_unparseable_rate: 0.01
+        mlflow:
+          experiment: schema-pruner
+          registered_model: schema-pruner-qwen2.5-coder-1.5b
+        model:
+          base: Qwen/Qwen2.5-Coder-1.5B-Instruct
+          revision: main
+          mirror_bucket: models
+          mirror_prefix: base
+          load_in_4bit: true
+    outs:
+    - path: reports/eval_schema_pruner.json
+      hash: md5
+      md5: 544509dc55d9abf3bbe43d1f33fe69a6
+      size: 403
+  register:
+    cmd: python -m sqlgen.registry.register_pruner
+    deps:
+    - path: reports/eval_schema_pruner.json
+      hash: md5
+      md5: 544509dc55d9abf3bbe43d1f33fe69a6
+      size: 403
+    - path: reports/train_report.json
+      hash: md5
+      md5: 17260dcb3ff316eb844ee0e3db177507
+      size: 273
+    - path: src/sqlgen/registry/promotion.py
+      hash: md5
+      md5: a67b626d8e4d10f21438806082a16e23
+      size: 1055
+    - path: src/sqlgen/registry/register_pruner.py
+      hash: md5
+      md5: 738d735286e0cf38ec43cd82c993eca6
+      size: 2527
+    params:
+      params.yaml:
+        eval:
+          max_new_tokens: 256
+          num_samples:
+          batch_size: 1
+          gates:
+            min_table_recall: 0.9
+            min_column_recall: 0.8
+            max_unparseable_rate: 0.01
+        mlflow:
+          experiment: schema-pruner
+          registered_model: schema-pruner-qwen2.5-coder-1.5b
+    outs:
+    - path: reports/registration.json
+      hash: md5
+      md5: e3e0a8dd8807daa45637f28eb54945d6
+      size: 560
