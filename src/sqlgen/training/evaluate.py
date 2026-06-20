@@ -56,9 +56,9 @@ def main() -> None:
     tracking.setup_mlflow(params.mlflow.experiment)
     adapter_path = mlflow.artifacts.download_artifacts(train_report["model_uri"])
 
-    tokenizer = load_tokenizer(params.model)
+    tokenizer = load_tokenizer(params.models.pruner)
     tokenizer.padding_side = "left"  # decoder-only batched generation
-    model = load_base_model(params.model)
+    model = load_base_model(params.models.pruner)
     model = PeftModel.from_pretrained(model, adapter_path)
     model.eval()
 

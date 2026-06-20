@@ -14,11 +14,12 @@ infra-up: ## start MinIO + MLflow + Prefect server
 infra-down:
 	$(COMPOSE) down
 
-# Seed the base model into MinIO from HuggingFace (needs setup-train + infra-up).
-# Run once per base/revision; training then pulls the model from MinIO, not HF.
+# Seed every registry base model into MinIO from HuggingFace (needs setup-train + infra-up).
+# Override MIRROR_MODEL=pruner|sqlgen to seed just one (default: all).
+MIRROR_MODEL ?= all
 mirror-base:
 	set -a; [ -f .env ] && . ./.env; set +a; \
-	AWS_S3_ENDPOINT_URL=http://localhost:9000 uv run python -m sqlgen.training.mirror
+	AWS_S3_ENDPOINT_URL=http://localhost:9000 uv run python -m sqlgen.training.mirror --model $(MIRROR_MODEL)
 
 pipeline: ## run the offline data pipeline in docker (builds image)
 	$(COMPOSE) up --build pipeline

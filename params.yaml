@@ -27,12 +27,26 @@ validation:
   max_fallback_rate: 0.05
   min_examples_per_split: 100
 
-model:
-  base: Qwen/Qwen2.5-Coder-1.5B-Instruct
-  revision: main
-  mirror_bucket: models
-  mirror_prefix: base
-  load_in_4bit: true
+models:
+  pruner:
+    base: Qwen/Qwen2.5-Coder-1.5B-Instruct
+    revision: main
+    mirror_bucket: models
+    mirror_prefix: base
+    load_in_4bit: true
+  sqlgen:
+    base: Qwen/Qwen2.5-Coder-3B-Instruct
+    revision: main
+    mirror_bucket: models
+    mirror_prefix: base
+    load_in_4bit: true
+
+presenter:
+  base_model: sqlgen # registry key whose bare base weights the presenter loads (zero-shot)
+  max_new_tokens: 320
+  max_preview_rows: 20
+  max_preview_cols: 12
+  chart_types: [bar, line, pie, scatter, area, histogram]
 
 train:
   seed: 42

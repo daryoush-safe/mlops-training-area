@@ -39,7 +39,7 @@ class ValidationConfig(BaseModel):
 
 
 class ModelConfig(BaseModel):
-    base: str = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
+    base: str
     revision: str = "main"
     mirror_bucket: str = "models"
     mirror_prefix: str = "base"
@@ -104,16 +104,41 @@ class EvalConfig(BaseModel):
     gates: EvalGatesConfig = Field(default_factory=EvalGatesConfig)
 
 
+class ModelRegistry(BaseModel):
+    pruner: ModelConfig = Field(
+        default_factory=lambda: ModelConfig(base="Qwen/Qwen2.5-Coder-1.5B-Instruct")
+    )
+    sqlgen: ModelConfig = Field(
+        default_factory=lambda: ModelConfig(base="Qwen/Qwen2.5-Coder-3B-Instruct")
+    )
+
+
+class PresenterConfig(BaseModel):
+    base_model: str = "sqlgen"
+    max_new_tokens: int = 320
+    max_preview_rows: int = 20
+    max_preview_cols: int = 12
+    chart_types: list[str] = ["bar", "line", "pie", "scatter", "area", "histogram"]
+
+
 class Params(BaseModel):
     paths: PathsConfig = Field(default_factory=PathsConfig)
     splits: SplitsConfig = Field(default_factory=SplitsConfig)
     prune: PruneConfig = Field(default_factory=PruneConfig)
     serialization: SerializationConfig = Field(default_factory=SerializationConfig)
     validation: ValidationConfig = Field(default_factory=ValidationConfig)
-    model: ModelConfig = Field(default_factory=ModelConfig)
+    models: ModelRegistry = Field(default_factory=ModelRegistry)
+    presenter: PresenterConfig = Field(default_factory=PresenterConfig)
     train: TrainConfig = Field(default_factory=TrainConfig)
     mlflow: MlflowConfig = Field(default_factory=MlflowConfig)
     eval: EvalConfig = Field(default_factory=EvalConfig)
+
+    def model_for(self, name: str) -> ModelConfig:
+        registry = dict(self.models)
+        try:
+            return registry[name]
+        except KeyError:
+            raise KeyError(f"unknown model {name!r}; known models: {sorted(registry)}") from None
 
 
 def load_params(path: str | Path = "params.yaml") -> Params:

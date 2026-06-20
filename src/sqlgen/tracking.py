@@ -40,8 +40,8 @@ def log_lineage(params: Params) -> None:
         "git_dirty": str(bool(_git("status", "--porcelain"))),
         "prompt_version": pruner_prompt.PROMPT_VERSION,
         "prompt_hash": pruner_prompt.prompt_hash(),
-        "base_model": params.model.base,
-        "base_model_revision": params.model.revision,
+        "base_model": params.models.pruner.base,
+        "base_model_revision": params.models.pruner.revision,
     }
     for path, md5 in dataset_hashes().items():
         tags[f"data_md5.{Path(path).name}"] = md5

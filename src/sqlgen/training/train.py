@@ -29,12 +29,13 @@ def main() -> None:
     set_seed(cfg.seed)
 
     tracking.setup_mlflow(params.mlflow.experiment)
-    run_name = f"train-{params.model.base.split('/')[-1].lower()}"
+    pruner = params.models.pruner
+    run_name = f"train-{pruner.base.split('/')[-1].lower()}"
     with mlflow.start_run(run_name=run_name) as run:
         tracking.log_lineage(params)
-        tracking.log_params_sections(params, ["model", "train"])
+        tracking.log_params_sections(params, ["models", "train"])
 
-        tokenizer = load_tokenizer(params.model)
+        tokenizer = load_tokenizer(pruner)
         train_rows = load_rows(params.paths.processed_dir / "train.jsonl", cfg.limit)
         val_rows = load_rows(params.paths.processed_dir / "val.jsonl", cfg.limit)
         train_ds, train_dropped = to_chat_dataset(train_rows, tokenizer, cfg.max_seq_len)
@@ -50,7 +51,7 @@ def main() -> None:
             val_dropped,
         )
 
-        model = load_base_model(params.model, bf16=cfg.bf16)
+        model = load_base_model(pruner, bf16=cfg.bf16)
 
         sft_config = SFTConfig(
             output_dir=str(cfg.output_dir),
