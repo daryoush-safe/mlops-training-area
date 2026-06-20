@@ -1,10 +1,3 @@
-"""Bare-model presenter: turns a SQL result into a short answer + optional chart spec.
-
-Loads the un-finetuned base model (reusing the 3B already mirrored for sqlgen, with no LoRA
-adapter attached) and runs it zero-shot. Heavy deps (torch/transformers) are imported here, not in
-``sqlgen.prompts.presenter``, so the prompt/parsing layer stays test-friendly without the train extra.
-"""
-
 from __future__ import annotations
 
 import logging
@@ -45,7 +38,6 @@ class Presenter:
         return self.tokenizer.decode(completion[0], skip_special_tokens=True)
 
     def present(self, question: str, columns: Sequence[str], rows: Sequence[Any]) -> Presentation:
-        """Generate a validated answer + chart spec for ``question`` over the SQL result."""
         messages = build_messages(
             question,
             columns,
