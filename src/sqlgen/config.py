@@ -113,6 +113,14 @@ class ModelRegistry(BaseModel):
     )
 
 
+class PresenterConfig(BaseModel):
+    base_model: str = "sqlgen"
+    max_new_tokens: int = 320
+    max_preview_rows: int = 20
+    max_preview_cols: int = 12
+    chart_types: list[str] = ["bar", "line", "pie", "scatter", "area", "histogram"]
+
+
 class Params(BaseModel):
     paths: PathsConfig = Field(default_factory=PathsConfig)
     splits: SplitsConfig = Field(default_factory=SplitsConfig)
@@ -120,6 +128,7 @@ class Params(BaseModel):
     serialization: SerializationConfig = Field(default_factory=SerializationConfig)
     validation: ValidationConfig = Field(default_factory=ValidationConfig)
     models: ModelRegistry = Field(default_factory=ModelRegistry)
+    presenter: PresenterConfig = Field(default_factory=PresenterConfig)
     train: TrainConfig = Field(default_factory=TrainConfig)
     mlflow: MlflowConfig = Field(default_factory=MlflowConfig)
     eval: EvalConfig = Field(default_factory=EvalConfig)

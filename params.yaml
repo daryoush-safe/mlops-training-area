@@ -41,6 +41,13 @@ models:
     mirror_prefix: base
     load_in_4bit: true
 
+presenter:
+  base_model: sqlgen # registry key whose bare base weights the presenter loads (zero-shot)
+  max_new_tokens: 320
+  max_preview_rows: 20
+  max_preview_cols: 12
+  chart_types: [bar, line, pie, scatter, area, histogram]
+
 train:
   seed: 42
   epochs: 2
