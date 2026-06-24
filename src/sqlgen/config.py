@@ -113,6 +113,23 @@ class ModelRegistry(BaseModel):
     )
 
 
+# class DbServiceConfig(BaseModel):
+#     # External service (separate project, port 8003) that generates SQL from a
+#     # schema + prompt and validates it by running it -- our graph forwards to it
+#     # instead of generating SQL locally.
+#     base_url: str = "http://localhost:8003"
+#     timeout_seconds: float = 30.0
+
+
+class InferenceConfig(BaseModel):
+    max_retries: int = 2
+    prune_max_new_tokens: int = 256
+    # If true, the pruner model is loaded right before generating and freed right
+    # after, instead of staying resident for the process lifetime. Trades latency
+    # (reload per node call) for a smaller steady-state VRAM footprint.
+    low_vram: bool = False
+
+
 class PresenterConfig(BaseModel):
     base_model: str = "sqlgen"
     max_new_tokens: int = 320
@@ -129,6 +146,8 @@ class Params(BaseModel):
     validation: ValidationConfig = Field(default_factory=ValidationConfig)
     models: ModelRegistry = Field(default_factory=ModelRegistry)
     presenter: PresenterConfig = Field(default_factory=PresenterConfig)
+    inference: InferenceConfig = Field(default_factory=InferenceConfig)
+    # db_service: DbServiceConfig = Field(default_factory=DbServiceConfig)
     train: TrainConfig = Field(default_factory=TrainConfig)
     mlflow: MlflowConfig = Field(default_factory=MlflowConfig)
     eval: EvalConfig = Field(default_factory=EvalConfig)

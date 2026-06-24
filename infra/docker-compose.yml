@@ -130,6 +130,37 @@ services:
               count: all
               capabilities: [gpu]
 
+  inference:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.train
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+      mlflow:
+        condition: service_healthy
+      prefect:
+        condition: service_healthy
+    environment:
+      PREFECT_API_URL: http://prefect:4200/api
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      DVC_REMOTE_ENDPOINT: http://minio:9000
+      PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+    volumes:
+      - ..:/app
+      - training_venv:/app/.docker-venv
+      - hf_cache:/root/.cache/huggingface
+    command: ["python", "flows/inference.py"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
 volumes:
   minio_data:
   mlflow_data:

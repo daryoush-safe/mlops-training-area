@@ -1,4 +1,4 @@
-.PHONY: setup setup-train infra-up infra-down mirror-base pipeline pipeline-local training training-local test lint dvc-push dvc-pull
+.PHONY: setup setup-train infra-up infra-down mirror-base pipeline pipeline-local training training-local inference inference-local test lint dvc-push dvc-pull
 
 COMPOSE = docker compose --env-file .env -f infra/docker-compose.yml
 
@@ -27,6 +27,9 @@ pipeline: ## run the offline data pipeline in docker (builds image)
 training: ## run train -> evaluate -> register in docker (needs NVIDIA Container Toolkit)
 	$(COMPOSE) up --build training
 
+inference: ## run the LangGraph text-to-SQL inference flow in docker
+	$(COMPOSE) run --rm inference --question "$(QUESTION)" --db-id "$(DB_ID)"
+
 # The dockerized pipeline writes .dvc/config.local pointing at minio:9000
 # (in-network endpoint); host targets reset it to localhost before running.
 dvc-localhost:
@@ -38,6 +41,9 @@ pipeline-local: dvc-localhost ## run the Prefect flow on the host (needs infra-u
 # Training runs on the host (the pipeline container has no GPU); needs setup-train + infra-up.
 training-local: dvc-localhost ## run train -> evaluate -> register via Prefect on the host
 	uv run python flows/training.py
+
+inference-local: dvc-localhost ## run the LangGraph inference flow locally
+	uv run python flows/inference.py --question "$(QUESTION)" --db-id "$(DB_ID)"
 
 repro: ## run the raw DVC pipeline without Prefect
 	uv run dvc repro
