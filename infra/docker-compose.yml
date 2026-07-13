@@ -130,6 +130,66 @@ services:
               count: all
               capabilities: [gpu]
 
+  vllm-pruner:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-pruner
+    ports:
+    - 8001:8001
+    volumes:
+    - ../models/serving/pruner:/models
+    ipc: host
+    restart: unless-stopped
+    command: >
+      --model /models/base
+      --served-model-name schema-pruner-base
+      --enable-lora
+      --lora-modules schema-pruner=/models/adapter
+      --max-model-len 8192
+      --gpu-memory-utilization 0.45
+      --host 0.0.0.0
+      --port 8001
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  vllm-sqlgen:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-sqlgen
+    ports:
+    - 8000:8000
+    volumes:
+    - ../models/serving/sqlgen:/models
+    ipc: host
+    restart: unless-stopped
+    command: >
+      --model /models/base
+      --served-model-name sqlgen presenter
+      --max-model-len 8192
+      --gpu-memory-utilization 0.45
+      --host 0.0.0.0
+      --port 8000
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
   inference:
     build:
       context: ..
@@ -141,6 +201,10 @@ services:
         condition: service_healthy
       prefect:
         condition: service_healthy
+      vllm-pruner:
+        condition: service_healthy
+      vllm-sqlgen:
+        condition: service_healthy
     environment:
       PREFECT_API_URL: http://prefect:4200/api
       MLFLOW_TRACKING_URI: http://mlflow:5000
@@ -148,6 +212,8 @@ services:
       AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
       DVC_REMOTE_ENDPOINT: http://minio:9000
       PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+      PRUNER_BASE_URL: http://vllm-pruner:8001/v1
+      SQLGEN_BASE_URL: http://vllm-sqlgen:8000/v1
     volumes:
       - ..:/app
       - training_venv:/app/.docker-venv
