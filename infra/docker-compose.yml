@@ -217,8 +217,8 @@ services:
       checkpoint-postgres:
         condition: service_healthy
     environment:
-      PRUNER_BASE_URL: http://vllm-pruner:8001/v1
-      SQLGEN_BASE_URL: http://vllm-sqlgen:8000/v1
+      PRUNER_BASE_URL: ${PRUNER_BASE_URL:-http://vllm-pruner:8001/v1}
+      SQLGEN_BASE_URL: ${SQLGEN_BASE_URL:-http://vllm-sqlgen:8000/v1}
       DB_SERVICE_URL: ${DB_SERVICE_URL:-http://host.docker.internal:8003}
       CHECKPOINT_DB_URI: postgresql://${CHECKPOINT_DB_USER:-postgres}:${CHECKPOINT_DB_PASSWORD:-postgres}@checkpoint-postgres:5432/langgraph_checkpoints?sslmode=disable
     extra_hosts:

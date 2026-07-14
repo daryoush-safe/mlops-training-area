@@ -25,7 +25,7 @@ def make_generate_node(deps: Deps):
                 history=history,
             )
         text = deps.sql_generator.complete(
-            messages=messages, max_tokens=deps.params.inference.prune_max_new_tokens
+            messages=messages, max_tokens=deps.params.inference.generator_max_new_tokens
         )
         try:
             sql = extract_sql(text)

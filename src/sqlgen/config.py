@@ -118,6 +118,7 @@ class ModelRegistry(BaseModel):
 class InferenceConfig(BaseModel):
     max_retries: int = 2
     prune_max_new_tokens: int = 256
+    generator_max_new_tokens: int = 320
     low_vram: bool = False
     history_turns: int = 8
 

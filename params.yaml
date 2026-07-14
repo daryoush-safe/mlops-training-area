@@ -74,11 +74,8 @@ mlflow:
 inference:
   max_retries: 2
   prune_max_new_tokens: 256
+  generator_max_new_tokens: 320
   low_vram: false # set true (or SQLGEN_LOW_VRAM=1) on GPUs around 4GB
-
-# db_service:
-#   base_url: http://localhost:8003 # SQLGEN_DBSERVICE_BASE_URL overrides
-#   timeout_seconds: 30
 
 eval:
   max_new_tokens: 256

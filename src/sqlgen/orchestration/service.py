@@ -44,6 +44,12 @@ class InferenceService:
             "error": None,
             "error_history": [],
             "status": "running",
+            "pruned_schema": None,
+            "sql": None,
+            "rows": None,
+            "columns": None,
+            "answer": None,
+            "chart": None,
         }
 
     async def stream_run(
