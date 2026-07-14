@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
+from urllib.parse import quote
 
 import yaml
 from pydantic import BaseModel, Field
@@ -113,21 +115,11 @@ class ModelRegistry(BaseModel):
     )
 
 
-# class DbServiceConfig(BaseModel):
-#     # External service (separate project, port 8003) that generates SQL from a
-#     # schema + prompt and validates it by running it -- our graph forwards to it
-#     # instead of generating SQL locally.
-#     base_url: str = "http://localhost:8003"
-#     timeout_seconds: float = 30.0
-
-
 class InferenceConfig(BaseModel):
     max_retries: int = 2
     prune_max_new_tokens: int = 256
-    # If true, the pruner model is loaded right before generating and freed right
-    # after, instead of staying resident for the process lifetime. Trades latency
-    # (reload per node call) for a smaller steady-state VRAM footprint.
     low_vram: bool = False
+    history_turns: int = 8
 
 
 class PresenterConfig(BaseModel):
@@ -136,6 +128,27 @@ class PresenterConfig(BaseModel):
     max_preview_rows: int = 20
     max_preview_cols: int = 12
     chart_types: list[str] = ["bar", "line", "pie", "scatter", "area", "histogram"]
+
+
+class CheckpointConfig(BaseModel):
+    host: str = "localhost"
+    port: int = 5433
+    database: str = "langgraph_checkpoints"
+    sslmode: str = "disable"
+    user_env: str = "CHECKPOINT_DB_USER"
+    password_env: str = "CHECKPOINT_DB_PASSWORD"
+    pool_max_size: int = 20
+
+    def dsn(self) -> str:
+        override = os.environ.get("CHECKPOINT_DB_URI")
+        if override:
+            return override
+        user = os.environ.get(self.user_env, "postgres")
+        password = os.environ.get(self.password_env, "")
+        auth = quote(user, safe="")
+        if password:
+            auth = f"{auth}:{quote(password, safe='')}"
+        return f"postgresql://{auth}@{self.host}:{self.port}/{self.database}?sslmode={self.sslmode}"
 
 
 class Params(BaseModel):
@@ -147,7 +160,7 @@ class Params(BaseModel):
     models: ModelRegistry = Field(default_factory=ModelRegistry)
     presenter: PresenterConfig = Field(default_factory=PresenterConfig)
     inference: InferenceConfig = Field(default_factory=InferenceConfig)
-    # db_service: DbServiceConfig = Field(default_factory=DbServiceConfig)
+    checkpoint: CheckpointConfig = Field(default_factory=CheckpointConfig)
     train: TrainConfig = Field(default_factory=TrainConfig)
     mlflow: MlflowConfig = Field(default_factory=MlflowConfig)
     eval: EvalConfig = Field(default_factory=EvalConfig)

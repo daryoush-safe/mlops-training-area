@@ -31,6 +31,15 @@ def test_build_messages_retry_includes_error_and_prev_sql():
     assert "full schema" in content
 
 
+def test_build_messages_replays_history_before_current_turn():
+    history = [{"question": "How many singers?", "sql": "SELECT count(*) FROM singer"}]
+    messages = build_messages("Only the French ones?", "schema", history=history)
+    assert [m["role"] for m in messages] == ["system", "user", "assistant", "user"]
+    assert messages[1]["content"] == "How many singers?"
+    assert messages[2]["content"] == "SELECT count(*) FROM singer"
+    assert "Only the French ones?" in messages[3]["content"]
+
+
 def test_extract_sql_plain():
     assert extract_sql("SELECT name FROM singer") == "SELECT name FROM singer"
 

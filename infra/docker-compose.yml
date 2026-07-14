@@ -115,10 +115,8 @@ services:
       DVC_REMOTE_ENDPOINT: http://minio:9000
       PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
     volumes:
-      # Mount the repo so the adapter/reports land on the host workspace.
       - ..:/app
       - training_venv:/app/.docker-venv
-      # Keep the downloaded base model across runs.
       - hf_cache:/root/.cache/huggingface
     # Requires the NVIDIA Container Toolkit on the host. For a CPU-only smoke
     # run, comment this block out (and set train.limit in params.yaml).
@@ -129,6 +127,23 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+
+  checkpoint-postgres:
+    image: postgres:16-alpine
+    container_name: checkpoint-postgres
+    environment:
+      POSTGRES_USER: ${CHECKPOINT_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${CHECKPOINT_DB_PASSWORD:-postgres}
+      POSTGRES_DB: langgraph_checkpoints
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - checkpoint_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CHECKPOINT_DB_USER:-postgres} -d langgraph_checkpoints"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   vllm-pruner:
     image: vllm/vllm-openai:latest
@@ -190,42 +205,32 @@ services:
               count: all
               capabilities: [gpu]
 
-  inference:
+  inference-api:
     build:
       context: ..
-      dockerfile: infra/docker/Dockerfile.train
+      dockerfile: infra/docker/Dockerfile.serving
     depends_on:
-      minio-init:
-        condition: service_completed_successfully
-      mlflow:
-        condition: service_healthy
-      prefect:
-        condition: service_healthy
       vllm-pruner:
         condition: service_healthy
       vllm-sqlgen:
         condition: service_healthy
+      checkpoint-postgres:
+        condition: service_healthy
     environment:
-      PREFECT_API_URL: http://prefect:4200/api
-      MLFLOW_TRACKING_URI: http://mlflow:5000
-      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
-      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
-      DVC_REMOTE_ENDPOINT: http://minio:9000
-      PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
       PRUNER_BASE_URL: http://vllm-pruner:8001/v1
       SQLGEN_BASE_URL: http://vllm-sqlgen:8000/v1
-    volumes:
-      - ..:/app
-      - training_venv:/app/.docker-venv
-      - hf_cache:/root/.cache/huggingface
-    command: ["python", "flows/inference.py"]
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+      DB_SERVICE_URL: ${DB_SERVICE_URL:-http://host.docker.internal:8003}
+      CHECKPOINT_DB_URI: postgresql://${CHECKPOINT_DB_USER:-postgres}:${CHECKPOINT_DB_PASSWORD:-postgres}@checkpoint-postgres:5432/langgraph_checkpoints?sslmode=disable
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8080/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 20
 
 volumes:
   minio_data:
@@ -234,3 +239,4 @@ volumes:
   pipeline_venv:
   training_venv:
   hf_cache:
+  checkpoint_pg_data:

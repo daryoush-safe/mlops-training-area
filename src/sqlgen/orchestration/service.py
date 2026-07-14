@@ -56,12 +56,21 @@ class InferenceService:
         thread_id: str | None = None,
     ) -> AsyncGenerator[str, None]:
         inputs = self._initial_state(question, schema, db_id, user_token)
+        resolved_thread_id = thread_id or str(uuid.uuid4())
         config = {
             "recursion_limit": self.recursion_limit,
-            "configurable": {"thread_id": thread_id or str(uuid.uuid4())},
+            "configurable": {"thread_id": resolved_thread_id},
         }
 
-        async for chunk in self.app.astream(inputs, config=config, stream_mode="updates"):
-            yield f"data: {json.dumps(chunk, default=str)}\n\n"
-
-        yield "data: [DONE]\n\n"
+        try:
+            async for chunk in self.app.astream(inputs, config=config, stream_mode="updates"):
+                yield f"data: {json.dumps(chunk, default=str)}\n\n"
+        except Exception as e:
+            # Failures surface mid-stream, after the response headers (and earlier
+            # events) have already been sent, so the HTTP layer can no longer turn
+            # them into a 5xx. Emit a terminal error event the client can render
+            # instead of leaving it to guess at a truncated stream.
+            log.exception("inference stream failed for thread %s", resolved_thread_id)
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+        finally:
+            yield "data: [DONE]\n\n"

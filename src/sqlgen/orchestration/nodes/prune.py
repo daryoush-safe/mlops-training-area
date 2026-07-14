@@ -11,6 +11,8 @@ log = logging.getLogger(__name__)
 
 def make_prune_node(deps: Deps):
     def prune_schema(state: InferenceState) -> InferenceState:
+        if state.get("history"):
+            return {"pruned_schema": state["schema"]}
         messages = build_messages(question=state["question"], schema_text=state["schema"])
         text = deps.pruner.complete(
             messages=messages, max_tokens=deps.params.inference.prune_max_new_tokens
