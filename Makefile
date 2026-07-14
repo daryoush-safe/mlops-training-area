@@ -28,7 +28,8 @@ training: ## run train -> evaluate -> register in docker (needs NVIDIA Container
 	$(COMPOSE) up --build training
 
 inference: ## run the LangGraph text-to-SQL inference flow in docker
-	$(COMPOSE) run --rm inference --question "$(QUESTION)" --db-id "$(DB_ID)"
+# 	$(COMPOSE) run --rm inference --question "$(QUESTION)" --db-id "$(DB_ID)"
+	$(COMPOSE) run --rm inference python flows/inference.py --question "$(QUESTION)" --db-id "$(DB_ID)"
 
 # The dockerized pipeline writes .dvc/config.local pointing at minio:9000
 # (in-network endpoint); host targets reset it to localhost before running.

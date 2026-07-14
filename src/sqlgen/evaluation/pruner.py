@@ -52,7 +52,6 @@ def score_example(
 
 
 def aggregate(scores: list[ExampleScore], n_unparseable: int = 0) -> dict[str, float]:
-    # Unparseable outputs count as zero (total misses), not excluded from the denominator.
     n_total = len(scores) + n_unparseable
     if n_total == 0:
         raise ValueError("no examples to aggregate")

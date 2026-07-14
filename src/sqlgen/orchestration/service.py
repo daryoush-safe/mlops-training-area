@@ -1,30 +1,67 @@
 from __future__ import annotations
 
+import json
 import logging
-from typing import Any
+import uuid
+from typing import TYPE_CHECKING, AsyncGenerator
+
+from langchain_core.messages import HumanMessage
 
 from sqlgen.config import Params, load_params
+from sqlgen.orchestration.deps import Deps
 from sqlgen.orchestration.graph import build_graph, recursion_limit_for
-from sqlgen.orchestration.nodes import InferencePipeline
 from sqlgen.orchestration.state import InferenceState
+
+if TYPE_CHECKING:
+    from langgraph.checkpoint.base import BaseCheckpointSaver
 
 log = logging.getLogger(__name__)
 
 
 class InferenceService:
-    """Long-lived wrapper that builds the graph once and reuses it for requests."""
-
-    def __init__(self, params: Params | None = None, *, params_path: str = "params.yaml") -> None:
+    def __init__(
+        self,
+        params: Params | None = None,
+        *,
+        params_path: str = "params.yaml",
+        checkpointer: "BaseCheckpointSaver | None" = None,
+    ) -> None:
         self.params = params or load_params(params_path)
-        self.pipeline = InferencePipeline(self.params)
-        self.app = build_graph(self.pipeline)
-        self.recursion_limit = recursion_limit_for(self.pipeline)
+        self.deps = Deps.build(self.params)
+        self.app = build_graph(self.deps, checkpointer=checkpointer)
+        self.recursion_limit = recursion_limit_for(self.params.inference.max_retries)
 
-    def run(self, question: str, db_id: str) -> InferenceState:
-        return self.app.invoke(
-            {"question": question, "db_id": db_id},
-            config={"recursion_limit": self.recursion_limit},
-        )
+    def _initial_state(
+        self, question: str, schema: str, db_id: uuid.UUID, user_token: str
+    ) -> InferenceState:
+        return {
+            "messages": [HumanMessage(content=question)],
+            "question": question,
+            "schema": schema,
+            "db_id": db_id,
+            "user_token": user_token,
+            "attempts": 0,
+            "error": None,
+            "error_history": [],
+            "status": "running",
+        }
 
-    def run_many(self, requests: list[dict[str, Any]]) -> list[InferenceState]:
-        return [self.run(req["question"], req["db_id"]) for req in requests]
+    async def stream_run(
+        self,
+        question: str,
+        schema: str,
+        db_id: uuid.UUID,
+        user_token: str,
+        *,
+        thread_id: str | None = None,
+    ) -> AsyncGenerator[str, None]:
+        inputs = self._initial_state(question, schema, db_id, user_token)
+        config = {
+            "recursion_limit": self.recursion_limit,
+            "configurable": {"thread_id": thread_id or str(uuid.uuid4())},
+        }
+
+        async for chunk in self.app.astream(inputs, config=config, stream_mode="updates"):
+            yield f"data: {json.dumps(chunk, default=str)}\n\n"
+
+        yield "data: [DONE]\n\n"
