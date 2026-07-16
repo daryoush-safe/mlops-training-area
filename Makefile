@@ -35,9 +35,9 @@ serving-prep: dvc-localhost
 serve:
 	$(COMPOSE) up -d --build serving-init vllm-pruner vllm-sqlgen inference-api
 
-inference: ## run the LangGraph text-to-SQL inference flow in docker
-# 	$(COMPOSE) run --rm inference --question "$(QUESTION)" --db-id "$(DB_ID)"
-	$(COMPOSE) run --rm inference python flows/inference.py --question "$(QUESTION)" --db-id "$(DB_ID)"
+inference:
+	$(COMPOSE) up -d --wait checkpoint-postgres
+	$(COMPOSE) up -d --build --no-deps inference-api
 
 # The dockerized pipeline writes .dvc/config.local pointing at minio:9000
 # (in-network endpoint); host targets reset it to localhost before running.
