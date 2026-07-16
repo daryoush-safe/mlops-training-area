@@ -46,6 +46,9 @@ class ModelConfig(BaseModel):
     mirror_bucket: str = "models"
     mirror_prefix: str = "base"
     load_in_4bit: bool = True
+    # MLflow registered model whose champion LoRA adapter is served next to the base
+    # weights. When None the role serves bare base weights (zero-shot).
+    adapter: str | None = None
 
     @property
     def mirror_key(self) -> str:

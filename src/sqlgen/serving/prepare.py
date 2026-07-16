@@ -6,49 +6,53 @@ import logging
 from pathlib import Path
 
 from sqlgen.artifacts import storage
-from sqlgen.config import load_params
+from sqlgen.config import ModelConfig, load_params
 from sqlgen.registry import resolve
 
 log = logging.getLogger(__name__)
 
-DEFAULT_MANIFEST = Path("models/serving/manifest.json")
+DEFAULT_SERVING_DIR = Path("models/serving")
 _BASE_MARKER = "config.json"
 
 
-def ensure_base(role: str, server: dict, registry: dict) -> None:
-    cfg = registry.get(role)
-    if cfg is None:
-        raise KeyError(f"manifest server {role!r} has no matching entry in params.models")
-    dest = Path(server["base"])
-    src = f"{cfg.mirror_bucket}/{cfg.mirror_key}"
-    if (dest / _BASE_MARKER).exists():
+def ensure_base(base_dir: Path, cfg: ModelConfig) -> None:
+    if (base_dir / _BASE_MARKER).exists():
         return
-    storage.ensure_dir_from_s3(src, dest, marker=_BASE_MARKER)
+    src = f"{cfg.mirror_bucket}/{cfg.mirror_key}"
+    storage.ensure_dir_from_s3(src, base_dir, marker=_BASE_MARKER)
 
 
-def ensure_adapter(role: str, server: dict, manifest: dict) -> None:
-    adapter = manifest.get("adapter", {})
-    name = adapter.get("registered_model")
-    if not name:
-        raise KeyError("manifest.adapter.registered_model is required to resolve the champion")
-    dest = Path(server["adapter"])
-    stamp = storage.ensure_champion_adapter(
-        name, dest, alias=adapter.get("alias", resolve.CHAMPION)
+def ensure_adapter(adapter_dir: Path, registered_model: str) -> dict:
+    return storage.ensure_champion_adapter(
+        registered_model, adapter_dir, alias=resolve.CHAMPION
     )
-    adapter.update({k: stamp[k] for k in ("version", "run_id", "source") if k in stamp})
 
 
-def prepare(manifest_path: Path) -> dict:
-    manifest = json.loads(manifest_path.read_text())
-    registry = dict(load_params().models)  # {role: ModelConfig}
+def prepare(serving_dir: Path = DEFAULT_SERVING_DIR) -> dict:
+    params = load_params()
+    servers: dict[str, dict] = {}
 
-    for role, server in manifest["servers"].items():
-        ensure_base(role, server, registry)
-        if "adapter" in server:
-            ensure_adapter(role, server, manifest)
+    for role, cfg in dict(params.models).items():
+        role_dir = serving_dir / role
+        base_dir = role_dir / "base"
+        ensure_base(base_dir, cfg)
+        server = {"base": str(base_dir)}
 
-    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
-    log.info("serving models ready under %s", manifest.get("serving_dir", manifest_path.parent))
+        if cfg.adapter:
+            adapter_dir = role_dir / "adapter"
+            stamp = ensure_adapter(adapter_dir, cfg.adapter)
+            server["adapter"] = str(adapter_dir)
+            server["champion"] = {
+                k: stamp[k]
+                for k in ("registered_model", "version", "run_id", "source")
+                if k in stamp
+            }
+        servers[role] = server
+
+    manifest = {"serving_dir": str(serving_dir), "servers": servers}
+    serving_dir.mkdir(parents=True, exist_ok=True)
+    (serving_dir / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    log.info("serving models ready under %s", serving_dir)
     return manifest
 
 
@@ -56,13 +60,13 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--manifest",
+        "--serving-dir",
         type=Path,
-        default=DEFAULT_MANIFEST,
-        help=f"path to the serving manifest (default: {DEFAULT_MANIFEST})",
+        default=DEFAULT_SERVING_DIR,
+        help=f"local dir to materialize serving models into (default: {DEFAULT_SERVING_DIR})",
     )
     args = parser.parse_args()
-    prepare(args.manifest)
+    prepare(args.serving_dir)
 
 
 if __name__ == "__main__":

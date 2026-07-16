@@ -169,16 +169,20 @@ services:
     - ../models/serving/pruner:/models
     ipc: host
     restart: unless-stopped
+    environment:
+      VLLM_WSL2_ENABLE_PIN_MEMORY: "1"
     depends_on:
       serving-init:
         condition: service_completed_successfully
     command: >
       --model /models/base
       --served-model-name schema-pruner-base
+      --quantization bitsandbytes
+      --load-format bitsandbytes
       --enable-lora
       --lora-modules schema-pruner=/models/adapter
       --max-model-len 8192
-      --gpu-memory-utilization 0.45
+      --gpu-memory-utilization 0.72
       --host 0.0.0.0
       --port 8001
     healthcheck:
@@ -203,14 +207,18 @@ services:
     - ../models/serving/sqlgen:/models
     ipc: host
     restart: unless-stopped
+    environment:
+      VLLM_WSL2_ENABLE_PIN_MEMORY: "1"
     depends_on:
       serving-init:
         condition: service_completed_successfully
     command: >
       --model /models/base
       --served-model-name sqlgen presenter
+      --quantization bitsandbytes
+      --load-format bitsandbytes
       --max-model-len 8192
-      --gpu-memory-utilization 0.45
+      --gpu-memory-utilization 0.72
       --host 0.0.0.0
       --port 8000
     healthcheck:

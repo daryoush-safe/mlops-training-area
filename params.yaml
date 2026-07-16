@@ -34,6 +34,7 @@ models:
     mirror_bucket: models
     mirror_prefix: base
     load_in_4bit: true
+    adapter: schema-pruner-qwen2.5-coder-1.5b
   sqlgen:
     base: Qwen/Qwen2.5-Coder-3B-Instruct
     revision: main
