@@ -21,9 +21,7 @@ def check_gates(metrics: dict, gates: EvalGatesConfig) -> list[str]:
     if metrics["table_recall"] < gates.min_table_recall:
         failures.append(f"table_recall {metrics['table_recall']:.4f} < {gates.min_table_recall}")
     if metrics["column_recall"] < gates.min_column_recall:
-        failures.append(
-            f"column_recall {metrics['column_recall']:.4f} < {gates.min_column_recall}"
-        )
+        failures.append(f"column_recall {metrics['column_recall']:.4f} < {gates.min_column_recall}")
     if metrics["unparseable_rate"] > gates.max_unparseable_rate:
         failures.append(
             f"unparseable_rate {metrics['unparseable_rate']:.4f} > {gates.max_unparseable_rate}"
@@ -52,7 +50,9 @@ def main() -> None:
     name = params.mlflow.registered_model
     version = mlflow.register_model(train_report["model_uri"], name)
     client = MlflowClient()
-    client.set_model_version_tag(name, version.version, "prompt_version", pruner_prompt.PROMPT_VERSION)
+    client.set_model_version_tag(
+        name, version.version, "prompt_version", pruner_prompt.PROMPT_VERSION
+    )
     promotion.set_candidate(client, name, version.version)
     log.info("registered %s version %s (alias: %s)", name, version.version, promotion.CANDIDATE)
 

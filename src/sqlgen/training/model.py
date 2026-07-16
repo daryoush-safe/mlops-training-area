@@ -4,7 +4,7 @@ import torch
 from peft import LoraConfig
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
-from sqlgen import storage
+from sqlgen.artifacts import storage
 from sqlgen.config import LoraParams, ModelConfig
 
 

@@ -36,9 +36,6 @@ services:
 
   mlflow:
     image: ghcr.io/mlflow/mlflow:latest
-    # The official image ships without boto3, which the MinIO artifact store needs.
-    # --artifacts-destination proxies artifacts through the server, so clients on
-    # the host only need MLFLOW_TRACKING_URI (no S3 credentials).
     command: >
       /bin/sh -c "pip install --quiet boto3 &&
       mlflow server --host 0.0.0.0 --port 5000
@@ -145,6 +142,24 @@ services:
       timeout: 5s
       retries: 20
 
+  serving-init:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.serving
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+      mlflow:
+        condition: service_healthy
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      AWS_S3_ENDPOINT_URL: http://minio:9000
+    volumes:
+      - ../models/serving:/app/models/serving
+    command: ["python", "-m", "sqlgen.serving.prepare"]
+
   vllm-pruner:
     image: vllm/vllm-openai:latest
     container_name: vllm-pruner
@@ -154,6 +169,9 @@ services:
     - ../models/serving/pruner:/models
     ipc: host
     restart: unless-stopped
+    depends_on:
+      serving-init:
+        condition: service_completed_successfully
     command: >
       --model /models/base
       --served-model-name schema-pruner-base
@@ -185,6 +203,9 @@ services:
     - ../models/serving/sqlgen:/models
     ipc: host
     restart: unless-stopped
+    depends_on:
+      serving-init:
+        condition: service_completed_successfully
     command: >
       --model /models/base
       --served-model-name sqlgen presenter

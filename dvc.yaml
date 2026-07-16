@@ -81,7 +81,7 @@ stages:
     deps:
       - data/processed/schema_pruner
       - src/sqlgen/prompts/pruner.py
-      - src/sqlgen/storage.py
+      - src/sqlgen/artifacts/storage.py
       - src/sqlgen/tracking.py
       - src/sqlgen/training/dataset.py
       - src/sqlgen/training/model.py
@@ -103,7 +103,7 @@ stages:
       - reports/train_report.json
       - src/sqlgen/evaluation/pruner.py
       - src/sqlgen/prompts/pruner.py
-      - src/sqlgen/storage.py
+      - src/sqlgen/artifacts/storage.py
       - src/sqlgen/training/evaluate.py
       - src/sqlgen/training/model.py
     params:

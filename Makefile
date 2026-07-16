@@ -1,4 +1,4 @@
-.PHONY: setup setup-train infra-up infra-down mirror-base pipeline pipeline-local training training-local inference inference-local test lint dvc-push dvc-pull
+.PHONY: setup setup-train infra-up infra-down mirror-base pipeline pipeline-local training training-local serving-prep serve inference inference-local test lint dvc-push dvc-pull
 
 COMPOSE = docker compose --env-file .env -f infra/docker-compose.yml
 
@@ -19,13 +19,21 @@ infra-down:
 MIRROR_MODEL ?= all
 mirror-base:
 	set -a; [ -f .env ] && . ./.env; set +a; \
-	AWS_S3_ENDPOINT_URL=http://localhost:9000 uv run python -m sqlgen.training.mirror --model $(MIRROR_MODEL)
+	AWS_S3_ENDPOINT_URL=http://localhost:9000 uv run python -m sqlgen.artifacts.mirror --model $(MIRROR_MODEL)
 
 pipeline: ## run the offline data pipeline in docker (builds image)
 	$(COMPOSE) up --build pipeline
 
 training: ## run train -> evaluate -> register in docker (needs NVIDIA Container Toolkit)
 	$(COMPOSE) up --build training
+
+serving-prep: dvc-localhost
+	set -a; [ -f .env ] && . ./.env; set +a; \
+	AWS_S3_ENDPOINT_URL=http://localhost:9000 MLFLOW_TRACKING_URI=$${MLFLOW_TRACKING_URI:-http://localhost:5000} \
+	uv run python -m sqlgen.serving.prepare
+
+serve:
+	$(COMPOSE) up -d --build serving-init vllm-pruner vllm-sqlgen inference-api
 
 inference: ## run the LangGraph text-to-SQL inference flow in docker
 # 	$(COMPOSE) run --rm inference --question "$(QUESTION)" --db-id "$(DB_ID)"
