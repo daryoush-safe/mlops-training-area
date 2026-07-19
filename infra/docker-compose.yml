@@ -252,6 +252,7 @@ services:
       CHECKPOINT_DB_URI: postgresql://${CHECKPOINT_DB_USER:-postgres}:${CHECKPOINT_DB_PASSWORD:-postgres}@checkpoint-postgres:5432/langgraph_checkpoints?sslmode=disable
     extra_hosts:
       - "host.docker.internal:host-gateway"
+      - "api.local:10.48.237.1"
     ports:
       - "8080:8080"
     restart: unless-stopped
