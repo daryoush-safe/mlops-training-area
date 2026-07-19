@@ -1,4 +1,4 @@
-.PHONY: setup setup-train infra-up infra-down mirror-base pipeline pipeline-local training training-local test lint dvc-push dvc-pull
+.PHONY: setup setup-train infra-up infra-down mirror-base pipeline pipeline-local training training-local serving-prep serve inference inference-local test lint dvc-push dvc-pull
 
 COMPOSE = docker compose --env-file .env -f infra/docker-compose.yml
 
@@ -19,13 +19,25 @@ infra-down:
 MIRROR_MODEL ?= all
 mirror-base:
 	set -a; [ -f .env ] && . ./.env; set +a; \
-	AWS_S3_ENDPOINT_URL=http://localhost:9000 uv run python -m sqlgen.training.mirror --model $(MIRROR_MODEL)
+	AWS_S3_ENDPOINT_URL=http://localhost:9000 uv run python -m sqlgen.artifacts.mirror --model $(MIRROR_MODEL)
 
 pipeline: ## run the offline data pipeline in docker (builds image)
 	$(COMPOSE) up --build pipeline
 
 training: ## run train -> evaluate -> register in docker (needs NVIDIA Container Toolkit)
 	$(COMPOSE) up --build training
+
+serving-prep: dvc-localhost
+	set -a; [ -f .env ] && . ./.env; set +a; \
+	AWS_S3_ENDPOINT_URL=http://localhost:9000 MLFLOW_TRACKING_URI=$${MLFLOW_TRACKING_URI:-http://localhost:5000} \
+	uv run python -m sqlgen.serving.prepare
+
+serve:
+	$(COMPOSE) up -d --build serving-init vllm-pruner vllm-sqlgen inference-api
+
+inference:
+	$(COMPOSE) up -d --wait checkpoint-postgres
+	$(COMPOSE) up -d --build --no-deps inference-api
 
 # The dockerized pipeline writes .dvc/config.local pointing at minio:9000
 # (in-network endpoint); host targets reset it to localhost before running.
@@ -38,6 +50,9 @@ pipeline-local: dvc-localhost ## run the Prefect flow on the host (needs infra-u
 # Training runs on the host (the pipeline container has no GPU); needs setup-train + infra-up.
 training-local: dvc-localhost ## run train -> evaluate -> register via Prefect on the host
 	uv run python flows/training.py
+
+inference-local: dvc-localhost ## run the LangGraph inference flow locally
+	uv run python flows/inference.py --question "$(QUESTION)" --db-id "$(DB_ID)"
 
 repro: ## run the raw DVC pipeline without Prefect
 	uv run dvc repro

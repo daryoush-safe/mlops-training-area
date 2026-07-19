@@ -46,6 +46,7 @@ def build_messages(
     *,
     prev_sql: str | None = None,
     error: str | None = None,
+    history: list[dict] | None = None,
 ) -> list[dict[str, str]]:
     if prev_sql is not None and error is not None:
         user = RETRY_TEMPLATE.format(
@@ -53,10 +54,13 @@ def build_messages(
         )
     else:
         user = USER_TEMPLATE.format(schema=schema_text, question=question)
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": user},
-    ]
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    for turn in history or []:
+        if turn.get("question"):
+            messages.append({"role": "user", "content": turn["question"]})
+        if turn.get("sql"):
+            messages.append({"role": "assistant", "content": turn["sql"]})
+    messages.append({"role": "user", "content": user})
     if target is not None:
         messages.append({"role": "assistant", "content": target})
     return messages
@@ -71,11 +75,6 @@ _SQL_START_RE = re.compile(r"\b(WITH|SELECT|INSERT|UPDATE|DELETE)\b", re.IGNOREC
 
 
 def extract_sql(text: str) -> str:
-    """Pull a single SQL statement out of model output.
-
-    Tolerates ```sql fences and leading prose (e.g. "Here is the query:"), keeps only
-    the first statement, and raises OutputParseError so callers can count failures.
-    """
     text = text.strip()
     fenced = _FENCE_RE.search(text)
     if fenced:

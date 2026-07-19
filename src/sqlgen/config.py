@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
+from urllib.parse import quote
 
 import yaml
 from pydantic import BaseModel, Field
@@ -44,6 +46,9 @@ class ModelConfig(BaseModel):
     mirror_bucket: str = "models"
     mirror_prefix: str = "base"
     load_in_4bit: bool = True
+    # MLflow registered model whose champion LoRA adapter is served next to the base
+    # weights. When None the role serves bare base weights (zero-shot).
+    adapter: str | None = None
 
     @property
     def mirror_key(self) -> str:
@@ -113,12 +118,41 @@ class ModelRegistry(BaseModel):
     )
 
 
+class InferenceConfig(BaseModel):
+    max_retries: int = 2
+    prune_max_new_tokens: int = 256
+    generator_max_new_tokens: int = 320
+    low_vram: bool = False
+    history_turns: int = 8
+
+
 class PresenterConfig(BaseModel):
     base_model: str = "sqlgen"
     max_new_tokens: int = 320
     max_preview_rows: int = 20
     max_preview_cols: int = 12
     chart_types: list[str] = ["bar", "line", "pie", "scatter", "area", "histogram"]
+
+
+class CheckpointConfig(BaseModel):
+    host: str = "localhost"
+    port: int = 5433
+    database: str = "langgraph_checkpoints"
+    sslmode: str = "disable"
+    user_env: str = "CHECKPOINT_DB_USER"
+    password_env: str = "CHECKPOINT_DB_PASSWORD"
+    pool_max_size: int = 20
+
+    def dsn(self) -> str:
+        override = os.environ.get("CHECKPOINT_DB_URI")
+        if override:
+            return override
+        user = os.environ.get(self.user_env, "postgres")
+        password = os.environ.get(self.password_env, "")
+        auth = quote(user, safe="")
+        if password:
+            auth = f"{auth}:{quote(password, safe='')}"
+        return f"postgresql://{auth}@{self.host}:{self.port}/{self.database}?sslmode={self.sslmode}"
 
 
 class Params(BaseModel):
@@ -129,6 +163,8 @@ class Params(BaseModel):
     validation: ValidationConfig = Field(default_factory=ValidationConfig)
     models: ModelRegistry = Field(default_factory=ModelRegistry)
     presenter: PresenterConfig = Field(default_factory=PresenterConfig)
+    inference: InferenceConfig = Field(default_factory=InferenceConfig)
+    checkpoint: CheckpointConfig = Field(default_factory=CheckpointConfig)
     train: TrainConfig = Field(default_factory=TrainConfig)
     mlflow: MlflowConfig = Field(default_factory=MlflowConfig)
     eval: EvalConfig = Field(default_factory=EvalConfig)

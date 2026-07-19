@@ -36,9 +36,6 @@ services:
 
   mlflow:
     image: ghcr.io/mlflow/mlflow:latest
-    # The official image ships without boto3, which the MinIO artifact store needs.
-    # --artifacts-destination proxies artifacts through the server, so clients on
-    # the host only need MLFLOW_TRACKING_URI (no S3 credentials).
     command: >
       /bin/sh -c "pip install --quiet boto3 &&
       mlflow server --host 0.0.0.0 --port 5000
@@ -115,10 +112,8 @@ services:
       DVC_REMOTE_ENDPOINT: http://minio:9000
       PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
     volumes:
-      # Mount the repo so the adapter/reports land on the host workspace.
       - ..:/app
       - training_venv:/app/.docker-venv
-      # Keep the downloaded base model across runs.
       - hf_cache:/root/.cache/huggingface
     # Requires the NVIDIA Container Toolkit on the host. For a CPU-only smoke
     # run, comment this block out (and set train.limit in params.yaml).
@@ -130,6 +125,143 @@ services:
               count: all
               capabilities: [gpu]
 
+  checkpoint-postgres:
+    image: postgres:16-alpine
+    container_name: checkpoint-postgres
+    environment:
+      POSTGRES_USER: ${CHECKPOINT_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${CHECKPOINT_DB_PASSWORD:-postgres}
+      POSTGRES_DB: langgraph_checkpoints
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - checkpoint_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CHECKPOINT_DB_USER:-postgres} -d langgraph_checkpoints"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  serving-init:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.serving
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+      mlflow:
+        condition: service_healthy
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      AWS_S3_ENDPOINT_URL: http://minio:9000
+    volumes:
+      - ../models/serving:/app/models/serving
+    command: ["python", "-m", "sqlgen.serving.prepare"]
+
+  vllm-pruner:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-pruner
+    ports:
+    - 8001:8001
+    volumes:
+    - ../models/serving/pruner:/models
+    ipc: host
+    restart: unless-stopped
+    environment:
+      VLLM_WSL2_ENABLE_PIN_MEMORY: "1"
+    depends_on:
+      serving-init:
+        condition: service_completed_successfully
+    command: >
+      --model /models/base
+      --served-model-name schema-pruner-base
+      --quantization bitsandbytes
+      --load-format bitsandbytes
+      --enable-lora
+      --lora-modules schema-pruner=/models/adapter
+      --max-model-len 8192
+      --gpu-memory-utilization 0.72
+      --host 0.0.0.0
+      --port 8001
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  vllm-sqlgen:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-sqlgen
+    ports:
+    - 8000:8000
+    volumes:
+    - ../models/serving/sqlgen:/models
+    ipc: host
+    restart: unless-stopped
+    environment:
+      VLLM_WSL2_ENABLE_PIN_MEMORY: "1"
+    depends_on:
+      serving-init:
+        condition: service_completed_successfully
+    command: >
+      --model /models/base
+      --served-model-name sqlgen presenter
+      --quantization bitsandbytes
+      --load-format bitsandbytes
+      --max-model-len 8192
+      --gpu-memory-utilization 0.72
+      --host 0.0.0.0
+      --port 8000
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  inference-api:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.serving
+    depends_on:
+      vllm-pruner:
+        condition: service_healthy
+      vllm-sqlgen:
+        condition: service_healthy
+      checkpoint-postgres:
+        condition: service_healthy
+    environment:
+      PRUNER_BASE_URL: ${PRUNER_BASE_URL:-http://vllm-pruner:8001/v1}
+      SQLGEN_BASE_URL: ${SQLGEN_BASE_URL:-http://vllm-sqlgen:8000/v1}
+      DB_SERVICE_URL: ${DB_SERVICE_URL:-http://host.docker.internal:8003}
+      CHECKPOINT_DB_URI: postgresql://${CHECKPOINT_DB_USER:-postgres}:${CHECKPOINT_DB_PASSWORD:-postgres}@checkpoint-postgres:5432/langgraph_checkpoints?sslmode=disable
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "api.local:10.48.237.1"
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8080/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
 volumes:
   minio_data:
   mlflow_data:
@@ -137,3 +269,4 @@ volumes:
   pipeline_venv:
   training_venv:
   hf_cache:
+  checkpoint_pg_data:

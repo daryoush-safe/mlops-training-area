@@ -34,6 +34,7 @@ models:
     mirror_bucket: models
     mirror_prefix: base
     load_in_4bit: true
+    adapter: schema-pruner-qwen2.5-coder-1.5b
   sqlgen:
     base: Qwen/Qwen2.5-Coder-3B-Instruct
     revision: main
@@ -70,6 +71,12 @@ train:
 mlflow:
   experiment: schema-pruner
   registered_model: schema-pruner-qwen2.5-coder-1.5b
+
+inference:
+  max_retries: 2
+  prune_max_new_tokens: 256
+  generator_max_new_tokens: 320
+  low_vram: false # set true (or SQLGEN_LOW_VRAM=1) on GPUs around 4GB
 
 eval:
   max_new_tokens: 256
